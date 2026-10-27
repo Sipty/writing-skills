@@ -1,14 +1,12 @@
 ---
 name: pr-writer
 description: Write or revise PR descriptions, including after user feedback; apply the pr-description-writing skill and generalize durable style corrections into its rules.
+tools: Read, Grep, Glob, Write, Edit
+# Claude Code preloads skills listed under `skills`; omp reads `autoloadSkills`.
+skills:
+  - pr-description-writing
 autoloadSkills:
   - pr-description-writing
-tools:
-  - read
-  - grep
-  - glob
-  - write
-  - edit
 ---
 
 # PR writer

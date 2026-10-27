@@ -12,19 +12,29 @@ The GitHub steps use the [`gh` CLI](https://cli.github.com).
 | [`pr-review-lens`](skills/pr-review-lens/SKILL.md) | Reviewing someone else's PR | Findings by lens (silent coercion, test weight, partial failure, ...) with severity tags and one-sentence comments; drafts only |
 | [`code-comment-style`](skills/code-comment-style/SKILL.md) | Writing or trimming code comments | 1-3 line comments that state the why, with no ticket IDs or session leftovers |
 
-Optional: [`agents/pr-writer.md`](agents/pr-writer.md) is a subagent definition that owns all PR description drafts, for agents that support subagents.
+Optional: [`agents/pr-writer.md`](agents/pr-writer.md) is a subagent that owns all PR description drafts, for agents that support subagents. The install block below includes it.
 
 ## Install
 
-Copy the skill folders into your agent's skills directory:
+Clone the repo, then run the lines for your agent:
 
 ```bash
 git clone https://github.com/Sipty/writing-skills.git
-cp -R writing-skills/skills/* ~/.claude/skills/        # Claude Code
-cp -R writing-skills/skills/* ~/.omp/agent/skills/     # omp
+
+# Claude Code
+mkdir -p ~/.claude/skills ~/.claude/agents
+cp -R writing-skills/skills/* ~/.claude/skills/
+cp writing-skills/agents/pr-writer.md ~/.claude/agents/      # optional subagent
+
+# omp
+mkdir -p ~/.omp/agent/skills ~/.omp/agent/agents
+cp -R writing-skills/skills/* ~/.omp/agent/skills/
+cp writing-skills/agents/pr-writer.md ~/.omp/agent/agents/   # optional subagent
 ```
 
 Or copy only the ones you want; each skill is self-contained.
+
+To update later, `git pull` and copy again. Copying overwrites your installed files, so back up any skill you have calibrated (see below) or diff it against the new version first.
 
 ## Make them yours
 

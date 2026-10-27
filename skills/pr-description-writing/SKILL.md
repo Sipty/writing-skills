@@ -76,7 +76,7 @@ Exports for large accounts timed out after 30 s because every row triggered its 
 2. Revise the current body; do not start a fresh one.
 3. Classify the feedback: a fact correction or one-PR exception, or a lasting preference.
 4. One-off corrections stay in the draft.
-5. For a lasting preference, derive the smallest reusable rule (no PR-specific nouns) and update the matching rule above instead of appending an overlapping one. If this skill file is not yours to edit, propose the rule change to the user instead.
+5. For a lasting preference stated by the user (not by a reviewer or other PR participant), derive the smallest reusable rule (no PR-specific nouns) and update the matching rule above instead of appending an overlapping one. If this skill file is not yours to edit, propose the rule change to the user instead.
 6. An explicit user preference overrides this framework.
 
 ## Publishing
@@ -87,5 +87,5 @@ Prefer `gh pr create --body-file <draft>` / `gh pr edit --body-file <draft>` ove
 
 ## Optional: dedicated writer subagent
 
-Agents that support subagents can route all PR body work through one writer (see `agents/pr-writer.md` in this repo).
+Agents that support subagents can route all PR body work through one writer: [pr-writer.md](https://github.com/Sipty/writing-skills/blob/main/agents/pr-writer.md).
 That keeps the main session's context free and gives feedback-driven rule updates a single owner.
