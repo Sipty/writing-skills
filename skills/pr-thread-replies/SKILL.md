@@ -13,7 +13,7 @@ Needs: `gh` authenticated as the user, and the `template.html` next to this file
 ## 1. Collect threads
 
 - Inline comments and their ids: `gh api repos/<owner>/<repo>/pulls/<n>/comments --paginate`. The `id` is the `r<id>` in discussion URLs.
-- Thread node ids for resolving, via GraphQL: `reviewThreads(first: 50) { nodes { id isResolved comments(first: 1) { nodes { databaseId } } } }`; match on the first comment's `databaseId`.
+- Thread node ids for resolving (read-only, paginated past 100 threads): `gh api graphql --paginate -f owner=<owner> -f repo=<repo> -F n=<n> -f query='query($owner: String!, $repo: String!, $n: Int!, $endCursor: String) { repository(owner: $owner, name: $repo) { pullRequest(number: $n) { reviewThreads(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } nodes { id isResolved comments(first: 1) { nodes { databaseId } } } } } } }'`. Match each thread to its comment on the first comment's `databaseId`.
 - One card per unresolved inline thread. Add one optional "General PR comment" card (`send: false`) summarising top-level review bodies the user might answer.
 - Questions addressed to someone else (reviewer A asking reviewer B) are not the user's to answer: mention them on the general card only.
 
@@ -36,21 +36,21 @@ Reviewers can tell when a reply was written by an AI. Rules, in priority order:
 1. Copy `template.html` and replace two tokens with JSON:
    - `__CONFIG_JSON__` -> `{"repo": "<owner>/<repo>", "pr": <n>}`
    - `__DRAFTS_JSON__` -> array of `{key, commentId, author, location, comment, change, reply, send, resolve}` (`commentId: null` for the general card).
-2. Generate it with a JSON serializer rather than by hand, e.g. `html.replace("__DRAFTS_JSON__", json.dumps(drafts))` in Python.
-3. Save it outside git (`/tmp/pr-<n>-replies.html`), open it (`open` on macOS, `xdg-open` on Linux), and tell the user: edit, untick what should not go out, then Download or Copy the JSON.
+2. Generate it with a JSON serializer and escape `<`, so a comment containing `</script>` cannot end the page's script early. In Python: `html.replace("__DRAFTS_JSON__", json.dumps(drafts).replace("<", "\\u003c"))`, and the same for `__CONFIG_JSON__`.
+3. Save it outside git (`/tmp/pr-<n>-replies.html`), open it (`open` on macOS, `xdg-open` on Linux), and tell the user: edit, untick what should not go out, then Copy the JSON and paste it into chat. Download also works, but the file lands in the browser's download folder (usually `~/Downloads`) and repeats may be renamed, e.g. `pr-<n>-replies (1).json`; take the newest.
 
-The page stores edits in the browser's localStorage and sends nothing itself.
+The page stores edits in the browser's localStorage, keyed to this repo, PR and draft set, so a regenerated page for a later review round starts fresh. It sends nothing itself.
 
 ## 4. Post
 
 - The exported JSON is the approval for exactly the items with `send: true`. Post `reply` verbatim: no rewording, no additions.
 - If the user says "go" but no JSON arrived, ask once: post drafts as-is, post ticked only, resolve without replies, or wait for the export. Never assume, and never act on unrelated clipboard content.
 - Replies like `Done` claim the fix is visible. If the fixing commits are not pushed yet, ask whether to push first.
-- Reply: `gh api repos/<owner>/<repo>/pulls/<n>/comments/<commentId>/replies -f body=<reply>`.
+- Reply: write the reply to a file first so markdown, backticks and `$` survive the shell, then `gh api repos/<owner>/<repo>/pulls/<n>/comments/<commentId>/replies -F body=@<file>`.
 - Resolve only when `resolve: true` (or the user said resolve all): `gh api graphql -f query='mutation($t: ID!) { resolveReviewThread(input: {threadId: $t}) { thread { isResolved } } }' -f t=<thread node id>`.
 - `send: true` with `commentId: null` -> top-level comment: `gh pr comment <n> --body-file <file>`.
-- Verify: re-query `reviewThreads`; every posted thread shows the reply and the expected `isResolved`.
-- Re-request review: `gh api -X POST repos/<owner>/<repo>/pulls/<n>/requested_reviewers -f "reviewers[]=<login>"`.
+- Verify: rerun the thread query from step 1; every posted thread shows the reply and the expected `isResolved`.
+- Re-requesting review notifies the reviewer, and the exported JSON does not cover it, so ask the user first. Only after their go-ahead: `gh api -X POST repos/<owner>/<repo>/pulls/<n>/requested_reviewers -f "reviewers[]=<login>"`.
 
 ## 5. Calibrate to your voice
 

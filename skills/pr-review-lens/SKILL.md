@@ -11,11 +11,11 @@ It never posts: the output is a draft the user picks from.
 
 ## 1. Gather
 
-1. `gh pr view <pr> --json number,title,body,author,baseRefName,headRefName,files` and `gh pr diff <pr>`.
+1. `gh pr view <pr> --json number,title,body,author,baseRefName,headRefName,headRefOid,files` and `gh pr diff <pr>`. Keep `headRefOid`: a pending review needs it as `commit_id`.
 2. Read the linked ticket if the body names one, and any notes or open questions the author left on their own diff.
 3. Read the repo's `AGENTS.md` / `CONTRIBUTING.md`; its conventions outrank this lens on style, never on correctness.
 4. Follow each change outward into the surrounding source: callers that were not updated, the sibling method that does it differently, the test that no longer covers the branch it claims to.
-   Use a worktree or `gh api repos/<owner>/<repo>/contents/<path>?ref=<head>`; the diff alone hides most of what matters.
+   Use a worktree (`gh pr checkout <pr>` in a separate clone) or fetch single files raw at the head commit: `gh api -H 'Accept: application/vnd.github.raw' 'repos/<owner>/<repo>/contents/<path>?ref=<headRefOid>'`. The diff alone hides most of what matters.
 
 Done when every changed file has been read in context, not just in the hunk.
 
@@ -128,4 +128,4 @@ Verdict line:
 
 Then stop and ask which numbers to post, as-is or edited.
 Posting is a separate step that needs the user's go-ahead.
-Safest route: a pending review only the user can see, which they submit themselves. Create it with `gh api repos/<owner>/<repo>/pulls/<n>/reviews --input <file>`, where the file holds `{"commit_id": "<head sha>", "body": "...", "comments": [{"path": "...", "line": 42, "side": "RIGHT", "body": "..."}]}` and no `event` field.
+Safest route: a pending review only the user can see, which they submit themselves. Create it with `gh api repos/<owner>/<repo>/pulls/<n>/reviews --input <file>`, where the file holds `{"commit_id": "<headRefOid>", "body": "...", "comments": [{"path": "...", "line": 42, "side": "RIGHT", "body": "..."}]}` and no `event` field.

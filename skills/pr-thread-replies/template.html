@@ -54,13 +54,17 @@ const CONFIG = __CONFIG_JSON__;
 const DRAFTS = __DRAFTS_JSON__;
 
 const PR_URL = `https://github.com/${CONFIG.repo}/pull/${CONFIG.pr}`;
-const STORE = `pr-${CONFIG.pr}-replies-v1`;
+// One saved entry per repo and PR; it is only restored for the exact draft set it was made from,
+// so a regenerated page for a later review round never exports stale comment ids.
+const STORE = `pr-replies-v2:${CONFIG.repo}#${CONFIG.pr}`;
+const DRAFTS_SIG = JSON.stringify(DRAFTS);
 const FILE = `pr-${CONFIG.pr}-replies.json`;
 document.title = `PR #${CONFIG.pr} - draft replies`;
 document.getElementById('title').textContent = `PR #${CONFIG.pr}: draft replies`;
 
-let state = JSON.parse(localStorage.getItem(STORE) || 'null') || structuredClone(DRAFTS);
-const save = () => localStorage.setItem(STORE, JSON.stringify(state));
+const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
+let state = saved && saved.drafts === DRAFTS_SIG ? saved.state : structuredClone(DRAFTS);
+const save = () => localStorage.setItem(STORE, JSON.stringify({ drafts: DRAFTS_SIG, state }));
 
 function render() {
   const list = document.getElementById('list');
