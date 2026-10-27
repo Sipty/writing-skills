@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PR draft replies</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1f2328; --muted:#656d76; --line:#d0d7de; --accent:#0969da; --quote:#f0f3f6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0d1117; --card:#161b22; --ink:#e6edf3; --muted:#8d96a0; --line:#30363d; --accent:#4493f8; --quote:#1c2128; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 120px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin-bottom: 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin-bottom:14px; }
+  .card.off { opacity: .5; }
+  .head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .loc { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .loc a { color: var(--accent); text-decoration: none; }
+  .who { color: var(--muted); font-size: 12px; }
+  blockquote { margin:10px 0; padding:8px 12px; background:var(--quote); border-left:3px solid var(--line); border-radius:4px; white-space:pre-wrap; }
+  .what { color: var(--muted); font-size: 12px; margin: 6px 0; }
+  textarea { width:100%; min-height:70px; padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--ink); font:inherit; resize:vertical; }
+  .opts { display:flex; gap:18px; margin-top:8px; font-size:13px; }
+  .opts label { display:flex; gap:6px; align-items:center; cursor:pointer; }
+  footer { position:fixed; left:0; right:0; bottom:0; background:var(--card); border-top:1px solid var(--line); padding:12px 16px; }
+  footer .inner { max-width:860px; margin:0 auto; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  button { border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:6px; padding:7px 14px; font:inherit; cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  #status { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title"></h1>
+  <div class="sub">
+    Edit the replies, untick anything that shouldn't go out, then hit <b>Download</b> or <b>Copy</b> and paste it into chat.
+    Edits are kept in this browser until you reset. Nothing is sent from this page.
+  </div>
+  <div id="list"></div>
+</main>
+<footer><div class="inner">
+  <button class="primary" id="download">Download JSON</button>
+  <button id="copy">Copy JSON</button>
+  <button id="reset">Reset to drafts</button>
+  <span id="status"></span>
+</div></footer>
+
+<script>
+// Filled in by the agent: CONFIG = {repo: "owner/name", pr: N}; DRAFTS = one entry per thread.
+// commentId is the GitHub review comment databaseId (null for a top-level PR comment).
+const CONFIG = __CONFIG_JSON__;
+const DRAFTS = __DRAFTS_JSON__;
+
+const PR_URL = `https://github.com/${CONFIG.repo}/pull/${CONFIG.pr}`;
+const STORE = `pr-${CONFIG.pr}-replies-v1`;
+const FILE = `pr-${CONFIG.pr}-replies.json`;
+document.title = `PR #${CONFIG.pr} - draft replies`;
+document.getElementById('title').textContent = `PR #${CONFIG.pr}: draft replies`;
+
+let state = JSON.parse(localStorage.getItem(STORE) || 'null') || structuredClone(DRAFTS);
+const save = () => localStorage.setItem(STORE, JSON.stringify(state));
+
+function render() {
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  state.forEach((d, i) => {
+    const card = document.createElement('div');
+    card.className = 'card' + (d.send ? '' : ' off');
+    const link = d.commentId ? `${PR_URL}#discussion_r${d.commentId}` : PR_URL;
+    card.innerHTML = `
+      <div class="head">
+        <span class="loc"><a href="${link}" target="_blank" rel="noopener"></a></span>
+        <span class="who"></span>
+      </div>
+      <blockquote></blockquote>
+      <div class="what"></div>
+      <textarea placeholder="Reply text (markdown)"></textarea>
+      <div class="opts">
+        <label><input type="checkbox" data-f="send"> Send</label>
+        ${d.commentId ? '<label><input type="checkbox" data-f="resolve"> Resolve thread after reply</label>' : ''}
+      </div>`;
+    card.querySelector('.loc a').textContent = d.location;
+    card.querySelector('.who').textContent = d.author ? '@' + d.author : '';
+    card.querySelector('blockquote').textContent = d.comment;
+    card.querySelector('.what').textContent = d.change ? 'Change made: ' + d.change : '';
+    const ta = card.querySelector('textarea');
+    ta.value = d.reply;
+    ta.addEventListener('input', () => { state[i].reply = ta.value; save(); });
+    card.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.checked = d[cb.dataset.f];
+      cb.addEventListener('change', () => {
+        state[i][cb.dataset.f] = cb.checked;
+        if (cb.dataset.f === 'send') card.classList.toggle('off', !cb.checked);
+        save();
+      });
+    });
+    list.appendChild(card);
+  });
+}
+
+function payload() {
+  return JSON.stringify({
+    repo: CONFIG.repo,
+    pr: CONFIG.pr,
+    replies: state.map(({ key, commentId, location, reply, send, resolve }) =>
+      ({ key, commentId, location, reply, send, resolve })),
+  }, null, 2);
+}
+
+function flash(msg) {
+  const s = document.getElementById('status');
+  s.textContent = msg;
+  setTimeout(() => { s.textContent = ''; }, 2500);
+}
+
+document.getElementById('download').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([payload()], { type: 'application/json' }));
+  a.download = FILE;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  flash(`Saved to Downloads/${FILE}`);
+};
+document.getElementById('copy').onclick = async () => {
+  await navigator.clipboard.writeText(payload());
+  flash('Copied');
+};
+document.getElementById('reset').onclick = () => {
+  if (!confirm('Discard your edits and restore the drafts?')) return;
+  state = structuredClone(DRAFTS);
+  save();
+  render();
+  flash('Reset');
+};
+
+render();
+</script>
+</body>
+</html>
