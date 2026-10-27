@@ -1,28 +1,44 @@
 # writing-skills
 
-Agent skills that make coding agents write PRs, review replies, reviews and code comments the way I do.
-Written for [omp](https://github.com/can1357/oh-my-pi); the `SKILL.md` format also works in Claude Code and other agents that read Agent Skills.
+Agent skills that make coding agents write PR descriptions, review replies, code reviews and code comments the way a careful senior engineer does: short, specific, and not obviously written by an AI.
 
-| Skill | What it does |
-|---|---|
-| [`pr-description-writing`](skills/pr-description-writing/SKILL.md) | PR description framework: Why, What changed, Testing, Checklist, ~2000 chars max. Learns from feedback. |
-| [`pr-writer`](agents/pr-writer.md) (agent) | Subagent that owns PR description drafts and applies the skill above. |
-| [`pr-thread-replies`](skills/pr-thread-replies/SKILL.md) | Replies to review threads in a human voice ("Done"), via an editable HTML page you approve before anything posts. |
-| [`chavdar-pr-reviewer`](skills/chavdar-pr-reviewer/SKILL.md) | Review lens for someone else's PR: what to flag, what to let pass, one-sentence comments. Drafts only, never posts. |
-| [`code-comment-style`](skills/code-comment-style/SKILL.md) | Terse code comments: 2-3 lines max, the why or invariant, no ticket IDs. |
+They are plain [Agent Skills](https://agentskills.io) (`SKILL.md` folders), so they work in Claude Code, [omp](https://github.com/can1357/oh-my-pi), and other agents that load skills.
+The GitHub steps use the [`gh` CLI](https://cli.github.com).
+
+| Skill | Use it when | What you get |
+|---|---|---|
+| [`pr-description-writing`](skills/pr-description-writing/SKILL.md) | Opening or revising a PR | Why / What changed / Testing / Checklist, under ~2000 characters, no invented test results |
+| [`pr-thread-replies`](skills/pr-thread-replies/SKILL.md) | Answering review comments on your PR | `Done`-style one-line replies on an editable HTML page; posts only what you approve, then resolves threads |
+| [`pr-review-lens`](skills/pr-review-lens/SKILL.md) | Reviewing someone else's PR | Findings by lens (silent coercion, test weight, partial failure, ...) with severity tags and one-sentence comments; drafts only |
+| [`code-comment-style`](skills/code-comment-style/SKILL.md) | Writing or trimming code comments | 1-3 line comments that state the why, with no ticket IDs or session leftovers |
+
+Optional: [`agents/pr-writer.md`](agents/pr-writer.md) is a subagent definition that owns all PR description drafts, for agents that support subagents.
 
 ## Install
 
-Copy a skill folder into your agent's skills directory, for example:
+Copy the skill folders into your agent's skills directory:
 
 ```bash
-cp -R skills/code-comment-style ~/.omp/agent/skills/      # omp
-cp -R skills/code-comment-style ~/.claude/skills/         # Claude Code
-cp agents/pr-writer.md ~/.omp/agent/agents/               # omp subagent
+git clone https://github.com/Sipty/writing-skills.git
+cp -R writing-skills/skills/* ~/.claude/skills/        # Claude Code
+cp -R writing-skills/skills/* ~/.omp/agent/skills/     # omp
 ```
 
-The skills refer to "him" (me, the author) because they were written for agents working on my behalf.
-Swap in your own voice examples; the calibration tables are the part worth personalising.
+Or copy only the ones you want; each skill is self-contained.
+
+## Make them yours
+
+The rules came from one engineer's real edits, so the examples are in their voice.
+They get noticeably better once they learn yours:
+
+- `pr-thread-replies` has a calibration table: after a few rounds, replace the examples with drafts you actually rewrote.
+- `pr-review-lens` quotes real review comments: swap in ten of your own.
+- `pr-description-writing` turns lasting feedback into rule edits; keep your copy writable so it can.
+
+## Safety
+
+None of the skills post on their own.
+Replies, reviews and PR bodies are drafts until you approve each one, and review comments never quote customer identifiers.
 
 ## License
 

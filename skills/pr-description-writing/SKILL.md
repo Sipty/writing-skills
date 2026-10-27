@@ -1,25 +1,22 @@
 ---
 name: pr-description-writing
-description: "Sole authority for PR description style - use on EVERY PR body create, draft, rewrite, or feedback revision; parents delegate to pr-writer"
+description: "Write or revise a pull request description: short Why, concrete What changed, honest Testing, repo checklist. Use on every PR body create, draft, rewrite, or revision after reviewer or user feedback."
 ---
 
-# PR Description Writing
+# PR description writing
 
-This skill owns DESCRIPTION style only. Mechanics (title, ticket linking, template) stay with the repo's own PR-creation skill, if it has one; never edit that skill. This is the only place the framework lives.
+A PR description is read by a reviewer with limited attention.
+It says why the change exists, what the final diff does, and what was actually verified, then stops.
 
-## Delegation
+This skill owns description style only.
+Title format, ticket linking and the repo's PR template stay with the repo's own conventions; follow them where they exist.
 
-- Any parent agent that creates, drafts, rewrites, or revises a PR description from feedback MUST delegate to the `pr-writer` agent and use its output. Never write the body yourself.
-- If you ARE `pr-writer`, apply this skill directly; never spawn or recurse.
-- Drafts go to `~/.omp/agent/pr-writer/drafts/<unique>.md`. Return the bodyfile path plus gaps (missing evidence, unknown ticket).
-- Writing a draft or receiving feedback is NOT permission to publish. Editing or creating a PR body on GitHub needs per-action user approval, handled by the parent.
+## Inputs
 
-## Inputs to gather (writer)
-
-1. Live diff of the PR/branch and the current PR body (if any).
-2. Repo PR template (`.github/pull_request_template.md` or equivalent) for the `# Checklist`.
-3. User-provided test evidence. Read ticket context only if needed for Why.
-4. Tests added is not tests passed. If evidence is missing, say so and mark the check as pending; never invent results.
+1. The live diff of the PR or branch, and the current PR body if there is one.
+2. The repo PR template (`.github/pull_request_template.md` or equivalent), for the checklist.
+3. Test evidence the user provided or you observed. Read the ticket only if the Why needs it.
+4. Tests added is not tests passed. If evidence is missing, say so and mark the check pending; never invent results.
 
 ## Framework
 
@@ -27,12 +24,12 @@ This skill owns DESCRIPTION style only. Mechanics (title, ticket linking, templa
 # Description
 
 ## Why
-<max 2 sentences: effect/problem, then reason/constraint>
+<max 2 sentences: effect or problem, then reason or constraint>
 
 ## What changed
 - <max 4 concrete bullets, ordered by importance>
 
-<optional: one relevant scope-boundary line>
+<optional: one scope-boundary line, e.g. "Backfill of existing rows is a follow-up.">
 
 # Testing
 - <max 2 bullets; separate observed evidence from pending checks>
@@ -40,27 +37,55 @@ This skill owns DESCRIPTION style only. Mechanics (title, ticket linking, templa
 ## Ticket(s)
 - <links, where applicable>
 
-# Checklist:
-<repo checklist copied verbatim; checks reflect evidence, never inferred>
+# Checklist
+<repo checklist copied verbatim; ticks reflect evidence, never inferred>
 ```
 
-Rules:
-- Describe the final diff, not the sequence of commits, iterations or superseded approaches. No file inventory, dumps, file/line references, SHAs, logs, internal/local paths, or unobserved results.
-- Precise technical terms are fine when they clarify the cause; otherwise plain language, symptom before mechanism.
-- Omit `Bonus` by default. Supporting changes go into the main bullets; an unrelated extra must be justified, not hidden.
-- API examples only when the repo/user convention needs them: a compact fenced request showing the changed contract, never invented content.
-- Length: at most ~1500-2000 chars including the checklist. Shorter is fine. No filler, risk write-ups, or AI-pipeline artifacts.
+If the repo template uses different headings, keep its headings and apply the same limits inside them.
 
-## Feedback revision
+## Rules
+
+- Describe the final diff, not the sequence of commits, iterations or abandoned approaches.
+- No file inventory, file/line references, SHAs, logs, local paths, or results nobody observed.
+- Precise technical terms are fine when they clarify the cause; otherwise plain language, symptom before mechanism.
+- No "Bonus" section. Supporting changes go into the main bullets; an unrelated extra must be justified, not hidden.
+- API examples only when the repo convention asks for them: a compact request showing the changed contract, never invented content.
+- Length: at most ~1500-2000 characters including the checklist. Shorter is fine. No filler, no risk essays, no AI-pipeline artifacts ("Generated with...", "Summary of changes:").
+
+## Example
+
+```markdown
+# Description
+
+## Why
+Exports for large accounts timed out after 30 s because every row triggered its own price lookup.
+
+## What changed
+- Price lookups are batched per export instead of per row.
+- The export endpoint streams rows instead of building the whole file in memory.
+- Timeout errors now return 504 with a retry hint instead of a generic 500.
+
+# Testing
+- Exported a 120k-row account locally: 4 s, previously timed out.
+- Staging check pending.
+```
+
+## Revising after feedback
 
 1. Reread this skill, the current draft, and the exact feedback.
-2. Revise the current body, not a fresh one.
-3. Classify the feedback: fact correction or one-PR exception, vs lasting preference.
-4. For a lasting preference, derive the minimal reusable wording/structure/evidence/scope constraint, with no PR-specific nouns, and update the matching existing rule in this skill (managed skill only) instead of appending an overlapping one. Keep it precise and checkable, compatible with useful reviewer background.
-5. An explicit user preference overrides the current framework. If scope is materially ambiguous, resolve it briefly; do not guess broad restrictions.
-6. Return the bodyfile and a one-line generalized rule diff (or "no durable rule change").
+2. Revise the current body; do not start a fresh one.
+3. Classify the feedback: a fact correction or one-PR exception, or a lasting preference.
+4. One-off corrections stay in the draft.
+5. For a lasting preference, derive the smallest reusable rule (no PR-specific nouns) and update the matching rule above instead of appending an overlapping one. If this skill file is not yours to edit, propose the rule change to the user instead.
+6. An explicit user preference overrides this framework.
 
-## Gotchas
+## Publishing
 
-- The validation pipeline can rewrite PR bodies on every push; a hand-written body only sticks if re-applied after the run goes green.
-- PRs open as draft (create, then `gh pr ready <n> --undo` if the tooling cannot open drafts directly).
+Writing or revising a draft is not permission to publish it.
+Creating or editing a PR body on GitHub needs the user's go-ahead for that specific action.
+Prefer `gh pr create --body-file <draft>` / `gh pr edit --body-file <draft>` over inline bodies, so the published text is exactly the reviewed draft.
+
+## Optional: dedicated writer subagent
+
+Agents that support subagents can route all PR body work through one writer (see `agents/pr-writer.md` in this repo).
+That keeps the main session's context free and gives feedback-driven rule updates a single owner.
